@@ -30,3 +30,9 @@ Add one entry every day. These are your highest-leverage exam revision asset.
    Why it fails: key leaks the moment the file is committed, shared, or pasted into a screenshot
    Fix: load from `.env` via `python-dotenv` (`load_dotenv()` → `os.environ["ANTHROPIC_API_KEY"]`), and add `.env` to `.gitignore` BEFORE the first `git add`
    Exam tip: "rotate the key after committing" is a distractor — the right answer is "never let it reach the commit in the first place"
+
+## W1D1 — Committed .env before adding it to .gitignore
+❌ Run `git add` / `git commit` on a tree where `.env` exists but `.gitignore` does not yet list it
+   Why it fails: the secret enters git history — deleting `.env` in a later commit leaves it readable via `git log -p`, `git show <old-sha>`, and the remote's history forever
+   Fix: create `.gitignore` with `.env` on its own line BEFORE the first `git add`; if it already leaked, rotate the key immediately, then `git rm --cached .env` + `git filter-repo` (or BFG) to scrub history, then force-push
+   Exam tip: "I deleted the .env file in a follow-up commit" is the canonical wrong answer — the secret is still in the earlier commit's blob and must be treated as compromised
