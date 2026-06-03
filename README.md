@@ -20,3 +20,4 @@ python week1/w1d1_setup.py
 | Day | Topic | Domain | Status |
 |-----|-------|--------|--------|
 | W1D1 | Setup + first API call | Prompt Engineering | Done |
+| W1D2 | System prompts + XML-structured output | Prompt Engineering | Done |
