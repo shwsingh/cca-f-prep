@@ -1,2 +1,12 @@
 .env
 .venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
+
+# Local logs (reminder agent, etc.)
+logs/
