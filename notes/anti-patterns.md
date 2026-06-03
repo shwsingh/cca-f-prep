@@ -10,11 +10,13 @@ Each entry has the same shape so you can scan fast:
 > **Exam tip** — the distractor answer to *not* pick
 
 Domain percentages reflect CCA-F exam weighting.
+This file is regenerated from `notes/W*D*/anti-patterns.md` — edit those, not this.
 
 ---
 
 ## 🧠 Prompt Engineering — 20%
 
+<!-- domain: Prompt Engineering -->
 ### W1D2 — Stuffing role + rules into every user message
 
 **The mistake**
@@ -28,7 +30,7 @@ messages = [{
 ```
 
 **Why it fails**
-The persona drifts across turns, can't be prompt-cached, and the `messages` list now mixes "what the customer said" with "what the agent is." Multi-turn conversations become unreadable and every turn re-pays the token cost of the rules.
+The persona drifts across turns, can't be prompt-cached, and the `messages` list now mixes 'what the customer said' with 'what the agent is.' Multi-turn conversations become unreadable and every turn re-pays the token cost of the rules.
 
 **Fix**
 Put persona and rules in `system`; keep `messages` as pure user/assistant turns.
@@ -43,17 +45,18 @@ client.messages.create(
 ```
 
 **Exam tip**
-Watch for distractors that say "include the role in the first user message for clarity." That's wrong — `system` exists exactly so you don't have to.
+Watch for distractors that say 'include the role in the first user message for clarity.' That's wrong — `system` exists exactly so you don't have to.
 
 ---
 
+<!-- domain: Prompt Engineering -->
 ### W1D2 — Free-form output when you need to parse it
 
 **The mistake**
-Asking the model to "categorize this ticket and tell me the priority" and then trying to grep the answer.
+Asking the model to 'categorize this ticket and tell me the priority' and then trying to grep the answer.
 
 **Why it fails**
-Model output varies — sometimes "Priority: high", sometimes "I'd say this is high priority", sometimes a paragraph. Your parser breaks on the first variant it didn't see.
+Model output varies — sometimes `Priority: high`, sometimes `I'd say this is high priority`, sometimes a paragraph. Your parser breaks on the first variant it didn't see.
 
 **Fix**
 Demand XML tags in the system prompt and extract with regex. Reject responses missing required tags.
@@ -76,6 +79,7 @@ JSON mode is the other right answer for structured output. XML tags are the righ
 
 ## 🔧 Tool Design & MCP — 18%
 
+<!-- domain: Tool Design & MCP -->
 ### W1D2 — Forgot to append assistant turn before tool_result
 
 **The mistake**
@@ -96,7 +100,6 @@ messages.append({
 The API validates conversation shape: a `tool_result` block in a user turn MUST be preceded by an assistant turn containing a `tool_use` block with the matching `tool_use_id`. Skipping the assistant turn looks tidy in code but the conversation is malformed.
 
 **Fix**
-
 ```python
 # ✅ right — append BOTH turns
 messages.append({"role": "assistant", "content": response.content})
@@ -113,6 +116,7 @@ The wrong answer on the exam looks like it goes `user → tool_result` directly.
 
 ## 🏗 Agentic Architecture — 27%
 
+<!-- domain: Agentic Architecture -->
 ### W1D1 — Missing stop_reason check
 
 **The mistake**
@@ -122,7 +126,6 @@ Read `response.content[0].text` and act on it without first checking `response.s
 `max_tokens` truncation is **silent** at the content level — you get a half-finished sentence that looks fine until it doesn't. Same for `tool_use`: there's no final text to consume; you must dispatch the tool call instead.
 
 **Fix**
-
 ```python
 # ✅ right — branch on stop_reason every time
 match response.stop_reason:
@@ -145,16 +148,14 @@ Distractor answers print/use `response.content[0].text` directly with no stop_re
 
 ## 📊 Context Management & Reliability — 15%
 
-*(none yet — Week 2+)*
-
----
+*(none yet)*
 
 ## 💻 Claude Code — 20%
 
+<!-- domain: Claude Code -->
 ### W1D1 — Hardcoded API key
 
 **The mistake**
-
 ```python
 # ❌ wrong
 client = anthropic.Anthropic(api_key="sk-ant-api03-xxxxxxxxxxxx")
@@ -164,7 +165,6 @@ client = anthropic.Anthropic(api_key="sk-ant-api03-xxxxxxxxxxxx")
 The key leaks the moment the file is committed, shared in a PR, or pasted into a screenshot. GitHub's secret scanner will find it within minutes; bots clone the key and start spending against your account.
 
 **Fix**
-
 ```python
 # ✅ right
 import os
@@ -180,6 +180,7 @@ Plus add `.env` to `.gitignore` **before** the first `git add`.
 
 ---
 
+<!-- domain: Claude Code -->
 ### W1D1 — Committed .env before adding it to .gitignore
 
 **The mistake**
@@ -194,7 +195,6 @@ git show <old-sha>:.env
 And the remote's history keeps it forever.
 
 **Fix (prevention)**
-
 ```bash
 # do this BEFORE the first git add
 echo ".env" >> .gitignore
@@ -202,7 +202,6 @@ git add .gitignore
 ```
 
 **Fix (recovery, if it already leaked)**
-
 ```bash
 # 1. rotate the key in the Anthropic console IMMEDIATELY
 # 2. remove it from the index but keep the local file
@@ -215,3 +214,5 @@ git push --force-with-lease
 
 **Exam tip**
 "I deleted the .env file in a follow-up commit" is the canonical wrong answer — the secret still lives in the earlier commit's blob and must be treated as compromised.
+
+---
