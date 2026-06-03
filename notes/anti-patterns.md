@@ -36,3 +36,10 @@ Add one entry every day. These are your highest-leverage exam revision asset.
    Why it fails: the secret enters git history — deleting `.env` in a later commit leaves it readable via `git log -p`, `git show <old-sha>`, and the remote's history forever
    Fix: create `.gitignore` with `.env` on its own line BEFORE the first `git add`; if it already leaked, rotate the key immediately, then `git rm --cached .env` + `git filter-repo` (or BFG) to scrub history, then force-push
    Exam tip: "I deleted the .env file in a follow-up commit" is the canonical wrong answer — the secret is still in the earlier commit's blob and must be treated as compromised
+
+## W1D2 — System Prompts & Structure
+❌ Stuffing role + rules into every user message
+   Fix: put persona and rules in `system`; user messages stay clean turns
+
+❌ Free-form output when you need to parse it
+   Fix: ask for XML tags + regex-extract; reject responses missing required tags
