@@ -7,13 +7,16 @@ to get parseable structure out of free-form text.
 
 import os
 import re
-import glob
+import sys
+from pathlib import Path
+
 import anthropic
 from dotenv import load_dotenv
 
-load_dotenv()
-os.makedirs("notes", exist_ok=True)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from scripts.anti_patterns import write_day, rebuild_master  # noqa: E402
 
+load_dotenv()
 client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 MODEL = "claude-haiku-4-5-20251001"
 
@@ -106,7 +109,7 @@ print(
 
 
 # ============================================================
-# anti-pattern log — data-driven, per-day file + master rebuild
+# anti-pattern log — data only; rendering lives in scripts/anti_patterns.py
 # ============================================================
 WEEK_DAY = "W1D2"
 
@@ -219,90 +222,6 @@ ENTRIES = [
 ]
 
 
-def render_entry(entry: dict, week_day: str) -> str:
-    return (
-        f"<!-- domain: {entry['domain']} -->\n"
-        f"### {week_day} — {entry['title']}\n\n"
-        f"**The mistake**\n{entry['mistake']}\n\n"
-        f"**Why it fails**\n{entry['why']}\n\n"
-        f"**Fix**\n{entry['fix']}\n\n"
-        f"**Exam tip**\n{entry['exam_tip']}\n"
-    )
-
-
-# write per-day file (overwrite, so re-runs are idempotent)
-os.makedirs(f"notes/{WEEK_DAY}", exist_ok=True)
-with open(f"notes/{WEEK_DAY}/anti-patterns.md", "w") as f:
-    for i, entry in enumerate(ENTRIES):
-        f.write(render_entry(entry, WEEK_DAY))
-        if i < len(ENTRIES) - 1:
-            f.write("\n---\n\n")
-
-print(f"\n✅ notes/{WEEK_DAY}/anti-patterns.md written ({len(ENTRIES)} entries)")
-
-
-# ---------- regenerate master ----------
-DOMAINS = [
-    ("Prompt Engineering",              20, "🧠"),
-    ("Tool Design & MCP",               18, "🔧"),
-    ("Agentic Architecture",            27, "🏗"),
-    ("Context Management & Reliability", 15, "📊"),
-    ("Claude Code",                     20, "💻"),
-]
-
-PREAMBLE = """# CCA-F Anti-Patterns
-
-Add one entry every day. These are your highest-leverage exam revision asset.
-
-Each entry has the same shape so you can scan fast:
-
-> **The mistake** — what you actually did
-> **Why it fails** — the mechanism, not the symptom
-> **Fix** — the minimal correct version (often with a code snippet)
-> **Exam tip** — the distractor answer to *not* pick
-
-Domain percentages reflect CCA-F exam weighting.
-This file is regenerated from `notes/W*D*/anti-patterns.md` — edit those, not this.
-
----
-
-"""
-
-
-def rebuild_master() -> None:
-    by_domain: dict[str, list[str]] = {d: [] for d, _, _ in DOMAINS}
-
-    for filepath in sorted(glob.glob("notes/W*D*/anti-patterns.md")):
-        with open(filepath, "r") as f:
-            text = f.read()
-        for block in re.split(r"\n---\n", text):
-            block = block.strip()
-            if not block:
-                continue
-            m = re.search(r"<!-- domain: (.+?) -->", block)
-            if not m:
-                continue
-            domain = m.group(1).strip()
-            if domain in by_domain:
-                by_domain[domain].append(block)
-
-    parts = [PREAMBLE]
-    for domain, pct, emoji in DOMAINS:
-        parts.append(f"## {emoji} {domain} — {pct}%\n\n")
-        entries = by_domain[domain]
-        if not entries:
-            parts.append("*(none yet)*\n\n")
-            continue
-        for i, block in enumerate(entries):
-            parts.append(block + "\n\n")
-            if i < len(entries) - 1:
-                parts.append("---\n\n")
-        parts.append("---\n\n")
-
-    summary = "".join(parts).rstrip() + "\n"
-    with open("notes/anti-patterns.md", "w") as f:
-        f.write(summary)
-    print("✅ notes/anti-patterns.md regenerated from per-day files")
-
-
+print()
+write_day(WEEK_DAY, ENTRIES)
 rebuild_master()
