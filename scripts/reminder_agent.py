@@ -27,7 +27,7 @@ START_DATE = datetime.date.fromisoformat(
     os.getenv("STUDY_START_DATE", "2025-06-02")
 )
 TO_EMAIL  = "shwetasiliconvalley@gmail.com"
-CC_EMAILS = ["aaryanvanshi@gmail.com", "shefali.cse@gmail.com"]
+CC_EMAILS = ["aaryanvanshi@gmail.com", "shefali.cse@gmail.com", "ajasingh@outlook.com"]
 
 # ── PLAN DATA ────────────────────────────────────────────────────────────────
 PLAN = {
