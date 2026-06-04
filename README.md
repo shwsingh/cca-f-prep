@@ -21,3 +21,4 @@ python week1/w1d1_setup.py
 |-----|-------|--------|--------|
 | W1D1 | Setup + first API call | Prompt Engineering | Done |
 | W1D2 | System prompts + XML-structured output | Prompt Engineering | Done |
+| W1D3 | Structured extraction (XML-guided JSON schema) | Prompt Engineering | Done |
