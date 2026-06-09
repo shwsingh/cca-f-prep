@@ -23,3 +23,4 @@ python week1/w1d1_setup.py
 | W1D2 | System prompts + XML-structured output | Prompt Engineering | Done |
 | W1D3 | Structured extraction (XML-guided JSON schema) | Prompt Engineering | Done |
 | W1D4 | Stateful support-agent conversation loop | Agentic Architecture | Done |
+| W1D5 | Multi-ticket extraction via forced tool use | Tool Design & MCP | Done |
