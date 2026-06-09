@@ -1,151 +1,140 @@
-# CCA-F Journey · Day 1 → Day 5
+# 🗺️ MeterFlow SupportOps — Week 1 Story
 
-A scannable visual of what's been learned, how lessons stack, and what's
-ahead. Regenerate as you finish more days — this is a revision asset, not
-a static map.
+> **A 6-day build of a multi-agent customer support pipeline.**
+> What it does: turn one messy customer email into resolved support tickets, automatically.
+> Built day by day as exam prep for Anthropic's CCA-F architect certification.
 
-Last updated: end of Day 5 (W1D5 done — `triple_issue` → 3 tickets, `empty_body` → []).
+---
 
-## 1. Timeline (what you learned each day)
+## 📊 What it does, in 3 numbers
 
-```
-   Day 1            Day 2            Day 3            Day 4            Day 5
-   ─────            ─────            ─────            ─────            ─────
-   W1D1             W1D2             W1D3             W1D4             W1D5
-   06-02            06-03            06-04            06-05            06-08
-   ⭐ ⭐ ⭐ ⭐ ⭐    ⭐ ⭐ ⭐ ⭐ ⭐    ⭐ ⭐ ⭐ ⭐ ⭐    ⭐ ⭐ ⭐ ⭐ ⭐    ⭐ ⭐ ⭐ ⭐ ⭐
-     │                │                │                │                │
-     ▼                ▼                ▼                ▼                ▼
-  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
-  │ FIRST   │    │ SHAPE   │    │ EXTRACT │    │ TALK    │    │ ENFORCE │
-  │ API     │    │ THE     │    │ ONE     │    │ BACK    │    │ THE     │
-  │ CALL    │    │ OUTPUT  │    │ FROM    │    │ AND     │    │ SHAPE   │
-  │         │    │         │    │ MESS    │    │ FORTH   │    │ AT API  │
-  └─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
-                                                                  ▲
-                                                               TODAY
-                                                          (1→N tickets;
-                                                          empty→[]; 2× cost,
-                                                          2× correctness)
-```
+<table>
+<tr>
+<th align="center" width="33%"><h1 style="margin:0">3</h1>customer emails<br><sub>processed end-to-end</sub></th>
+<th align="center" width="33%"><h1 style="margin:0">4</h1>tickets extracted<br><sub>severity-sorted, fanned out</sub></th>
+<th align="center" width="33%"><h1 style="margin:0">$0.015</h1>total spend<br><sub>across all model calls</sub></th>
+</tr>
+</table>
 
-## 2. Concept dependency (how lessons stack)
+---
 
-```
-                  ┌──────────────────────────────────────────────┐
-                  │   stop_reason matters on EVERY response      │
-                  │   (learned D1, reused D4 max_tokens guard,   │
-                  │    reused D5 tool_use completion signal)     │
-                  └──────────────────┬───────────────────────────┘
-                                     │
-            ┌────────────────────────┼────────────────────────┐
-            │                        │                        │
-            ▼                        ▼                        ▼
-   ┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-   │  D2: persona │         │ D3: extract  │         │ D4: stateful │
-   │  in `system` │ ──────► │ ONE ticket   │ ──────► │ conversation │
-   │  + XML tags  │         │ (XML+regex)  │         │ loop, role   │
-   │  for parsing │         │ + Pydantic   │         │ alternation  │
-   └──────┬───────┘         └──────┬───────┘         └──────┬───────┘
-          │                        │                        │
-          │                        ▼                        │
-          │                ┌──────────────┐                 │
-          └───────────────►│ D5: extract  │                 │
-                           │ MANY tickets │◄────────────────┘
-                           │ via tool use │
-                           │ (typed shape)│
-                           └──────┬───────┘
-                                  │
-                  ┌───────────────┴──────────────────┐
-                  │                                  │
-                  ▼                                  ▼
-            (Wk 2 routing)                   (Wk 4 reliability)
-            fan out per-ticket               retry / escalate on
-            to Resolution Agent              non-end_turn states
+## 🛠️ The system — one diagram, one story
+
+The pipeline takes one inbound email and resolves every issue inside it. Each node below was built on a specific day; together they form a runnable system. **Read it left-to-right.**
+
+```mermaid
+flowchart LR
+    Email["📧<br/><b>Customer email</b><br/>(messy, multi-issue)"]:::input
+
+    subgraph Build1["🟢 Built D5 · extracts shape"]
+      Extract["<b>Multi-ticket<br/>extractor</b><br/><i>tool use + Pydantic</i>"]
+    end
+
+    subgraph Build2["🟢 Built D6 · ordering policy"]
+      Sort["<b>Severity sort</b><br/><i>critical → low</i>"]
+    end
+
+    subgraph Build3["🟢 Built D4 · stateful loop"]
+      Agent1["<b>Resolution agent</b><br/><i>ticket 1</i>"]
+      Agent2["<b>Resolution agent</b><br/><i>ticket 2</i>"]
+      AgentN["<b>Resolution agent</b><br/><i>ticket N</i>"]
+    end
+
+    subgraph Build4["🟢 Built D6 · rollup"]
+      Result["📊<br/><b>BatchResult</b><br/>tokens · cost · resolved/errored"]
+    end
+
+    Email --> Extract
+    Extract -->|"N tickets"| Sort
+    Sort --> Agent1
+    Sort --> Agent2
+    Sort --> AgentN
+    Agent1 --> Result
+    Agent2 --> Result
+    AgentN --> Result
+
+    classDef input  fill:#ddf4ff,stroke:#0969da,color:#0c2d6b,stroke-width:2px
+    classDef done   fill:#dafbe1,stroke:#1a7f37,color:#0e5223
 ```
 
-## 3. Capstone architecture growth (`meterflow/`)
+**Foundation days that don't appear as nodes but make everything above possible:**
+🔧 **D1** API basics + `stop_reason` · 🧠 **D2** `system` prompts + XML output · 🎯 **D3** single-ticket extraction (Day 5 replaced it with the multi-ticket version above)
+
+---
+
+## 📈 Where I am in the curriculum
 
 ```
-After D1+D2:      After D3:                     After D5:
-─────────────     ──────────────────────        ──────────────────────────────
-(no meterflow/    meterflow/                    meterflow/
- yet — just       ├── __init__.py               ├── __init__.py
- day scripts)     └── extractors/               ├── extractors/
-                      ├── __init__.py           │   ├── __init__.py
-                      └── ticket_extractor.py   │   ├── ticket_extractor.py
-                          • SupportTicket       │   │   • SupportTicket
-                          • extract_ticket()    │   │   • extract_ticket()
-                                                │   └── multi_ticket_extractor.py
-                                                │       • extract_tickets()
-                                                │       • TOOL_SCHEMA
-                                                │       • tool_schema_from_pydantic()
-                                                └── agents/         ◄─ added D4
-                                                    ├── __init__.py
-                                                    └── support_agent.py
-                                                        • ConversationState
-                                                        • build_system_prompt()
-                                                        • agent_turn()
-                                                        • run_conversation()
+   Week 1            Week 2          Week 3           Week 4         Week 5         Week 6
+   ─────────         ──────────      ──────────       ──────────     ──────────     ──────────
+   ██████████        ░░░░░░░░░░      ░░░░░░░░░░       ░░░░░░░░░░     ░░░░░░░░░░     ░░░░░░░░░░
+   Foundations       MCP +           Multi-agent      Reliability    Evals +        Full system
+   ✅ done           prompt caching  research         + Claude Code  polish         exam-shaped
+                     ← Day 7 next
 ```
 
-## 4. CCA-F exam domain coverage (5 days in)
+**6 / 36 days complete · 17% through · all 5⭐ days · no skipped days**
+
+---
+
+## 💡 The one rule that mattered most this week
+
+> ### Anything you parse → demand structure.
+> XML tags, JSON Schema, or a tool call — pick one, then **enforce the same schema on both sides**: in the prompt (so the model knows what to emit) and in code (so unsigned input never reaches the routing layer).
+>
+> Why this rule dominates: every other Week 1 lesson is downstream of it. The conversation loop needs a structured `SupportTicket` to know what it's resolving. The pipeline can't sort by severity if `severity` is a string we hope the model returns. The cost-tracking property on `BatchResult` can't fire if the conversations don't have typed token counts. **Lose the structure, lose the system.**
+
+---
+
+## 🎯 What's next
+
+**Day 7 — prompt caching on the support agent's system prompt.** The Day 4 system prompt (with the `<ticket>` block embedded) is recomputed on every conversation turn. Adding `cache_control` should cut input-token cost ~70% on the multi-turn cases. Concrete savings target: $0.015 → ~$0.006 to re-run the same Week 1 capstone.
+
+---
+
+<details>
+<summary>📦 <strong>Details for the curious</strong> — code layout, lesson list, anti-patterns, backlog</summary>
+
+<br>
+
+### 🏗️ Where the code lives (`meterflow/` package)
 
 ```
-Domain                              Weight   Touched     Anti-patterns logged
-─────────────────────────────────── ──────   ─────────   ────────────────────
-🧠 Prompt Engineering                 20%    ████████░   4   (D2, D3)
-🔧 Tool Design & MCP                  18%    ███████░░   4   (D2, D5)
-🏗 Agentic Architecture               27%    ██████░░░   3   (D4)
-📊 Context Mgmt & Reliability         15%    ████░░░░░   2   (D3, D4)
-💻 Claude Code                        20%    ░░░░░░░░░   0   (not yet — Wk 4)
-
-                                                         ───
-                                                         16 entries
+meterflow/extractors/     ←  D3 (single) + D5 (multi)  · SupportTicket, extract_tickets()
+meterflow/agents/         ←  D4                        · ConversationState, run_conversation()
+meterflow/pipelines/      ←  D6                        · BatchResult, process_email()
+week1/wNdN_*.py           ←  thin runnable demos that exercise the modules above
 ```
 
-## 5. The five rules you've absorbed so far
+### 📏 All six rules absorbed this week
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                                                                         │
-│  1. Persona goes in `system`, never in user messages.             [D2]  │
-│                                                                         │
-│  2. Anything you parse → demand structure (XML tags, JSON schema, │     │
-│     or a tool call). Free-text parsing is technical debt.        [D3]  │
-│                                                                         │
-│  3. Set `temperature=0` for any task whose output you'll compare       │
-│     or route on. Sampling variance is for generation, not          [D3] │
-│     classification.                                                     │
-│                                                                         │
-│  4. Multi-turn loops are a client-side contract — the API will         │
-│     silently accept broken conversation shape. `ConversationState` [D4] │
-│     (or equivalent) makes the bug unrepresentable.                      │
-│                                                                         │
-│  5. Tool use is structured output's other right answer. When            │
-│     the shape is a list, or the contract has to be enforced at    [D5] │
-│     the API surface, reach for tools. Derive the schema from           │
-│     Pydantic — one source of truth.                                     │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+| # | Rule | Day |
+|---|------|-----|
+| 1 | Persona goes in `system`, never in user messages | D2 |
+| 2 | Anything you parse → demand structure (XML, JSON Schema, tool use) | D3 |
+| 3 | `temperature=0` for any task whose output you parse or route on | D3 |
+| 4 | Role alternation is a client-side contract (API silently accepts broken shape) | D4 |
+| 5 | Tool use is structured output's other right answer (use it for lists & strict shapes) | D5 |
+| 6 | Batch processing needs per-item isolation (one bad ticket ≠ dead batch) | D6 |
 
-## 6. What's next (the road ahead)
+### 📚 Anti-pattern bank — 19 entries across 4 domains
 
-```
-   Week 1              Week 2              Week 3+
-   ─────────           ─────────           ──────────
-   ✅ D1 setup         D7-12: MCP +        D13-18: multi-agent
-   ✅ D2 system        prompt caching      research (Scenario 3)
-   ✅ D3 extract       + agent loops
-   ✅ D4 conversation                      D19-23: support-agent
-   ✅ D5 tool use                          reliability (Scenario 1
-                                           full build-out)
-   ⏳ D6: Week 1
-        capstone        D24-29: Claude
-        integration     Code + CI/CD
-                        (Scenarios 2, 4, 5)
+| Domain | Exam weight | Entries this week | Coverage |
+|--------|:-----------:|:-----------------:|:--------:|
+| 🧠 Prompt Engineering | 20% | 4 | strong |
+| 🔧 Tool Design & MCP | 18% | 4 | strong |
+| 🏗️ Agentic Architecture | 27% | 6 | strong |
+| 📊 Context Mgmt & Reliability | 15% | 3 | partial |
+| 💻 Claude Code | 20% | 0 | not yet (Week 4) |
 
-                                           D30-36: evals, polish,
-                                           full system exam-shaped
-```
+Master file regenerated from per-day files at `notes/anti-patterns.md` — never hand-edit it.
+
+### 🔎 Backlog — open findings I chose to defer, not blockers
+
+| Found on | Finding | When to fix |
+|----------|---------|-------------|
+| D6 | `triple_issue` resolved 1/3 — auth + quota scripts close ambiguously, agent over-asks | Day 19 (reliability + eval harness exist by then) |
+| D5 | No test of malformed bodies (binary, very long text). Empty body works. | Week 4 fuzz pass |
+| D4 | First-draft claim about server-side role-alternation enforcement was wrong; corrected mid-session | Already fixed in `notes/W1D4/anti-patterns.md` |
+
+</details>

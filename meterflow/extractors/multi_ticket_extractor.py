@@ -73,16 +73,12 @@ Severity rubric: production-down or revenue-impacting = high or critical;
 single-user friction = low or medium. When in doubt, pick the lower one."""
 
 
-def extract_tickets(
+def extract_tickets_with_usage(
     raw_email: str,
     client: anthropic.Anthropic | None = None,
-) -> list[SupportTicket]:
-    """Extract zero or more validated SupportTickets from one raw email.
-
-    Forces tool use, asserts stop_reason='tool_use', validates each ticket
-    individually so one bad row doesn't poison the whole batch. Raises
-    ValueError if the model refuses the tool or returns a malformed payload.
-    """
+) -> tuple[list[SupportTicket], dict]:
+    """Same as extract_tickets but also returns {"input_tokens", "output_tokens"}
+    so pipeline callers can aggregate cost across the full request lifecycle."""
     client = client or anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
     response = client.messages.create(
         model=MODEL,
@@ -117,4 +113,23 @@ def extract_tickets(
             validated.append(SupportTicket.model_validate(raw))
         except ValidationError as e:
             raise ValueError(f"Ticket {i} failed validation.\nRaw: {raw}\nError: {e}") from e
-    return validated
+
+    usage = {
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+    }
+    return validated, usage
+
+
+def extract_tickets(
+    raw_email: str,
+    client: anthropic.Anthropic | None = None,
+) -> list[SupportTicket]:
+    """Extract zero or more validated SupportTickets from one raw email.
+
+    Day 5 contract — unchanged. Now a thin wrapper around
+    extract_tickets_with_usage so callers that don't care about token
+    counts keep the simple return shape.
+    """
+    tickets, _ = extract_tickets_with_usage(raw_email, client=client)
+    return tickets

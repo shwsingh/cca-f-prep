@@ -24,3 +24,6 @@ python week1/w1d1_setup.py
 | W1D3 | Structured extraction (XML-guided JSON schema) | Prompt Engineering | Done |
 | W1D4 | Stateful support-agent conversation loop | Agentic Architecture | Done |
 | W1D5 | Multi-ticket extraction via forced tool use | Tool Design & MCP | Done |
+| W1D6 | Email-to-resolution pipeline (Week 1 capstone) | Agentic Architecture | Done |
+
+**Week 1 ✅ complete** — end-to-end MeterFlow pipeline (extract → route → resolve) live under `meterflow/`. See `notes/journey.md` for visual recap.
