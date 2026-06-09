@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I built a multi-agent support system in 6 days · Shweta Singh</title>
+<meta name="description" content="A 6-day build of a multi-agent customer support pipeline using Claude. What worked, what surprised me, what I'd change.">
+<meta property="og:title" content="I built a multi-agent support system in 6 days — what I'd change">
+<meta property="og:type" content="article">
+<meta property="og:description" content="A 6-day build of a multi-agent customer support pipeline using Claude. What worked, what surprised me, what I'd change.">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root { color-scheme: light dark; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: ui-serif, "Charter", "Georgia", serif;
+    color: #222; background: #fafaf7; line-height: 1.7; font-size: 18px;
+  }
+  #doc { max-width: 680px; margin: 0 auto; padding: 72px 28px 120px; }
+  h1 { font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+       font-size: 2.3em; line-height: 1.18; margin: 0 0 .2em 0; letter-spacing: -0.015em; }
+  h2 { font-family: -apple-system, "SF Pro Display", system-ui, sans-serif;
+       font-size: 1.45em; margin-top: 2.2em; line-height: 1.3; }
+  .meta { font-family: -apple-system, system-ui, sans-serif;
+          color: #6a6a6a; font-size: .92em; margin-bottom: 2em;
+          border-bottom: 1px solid #dad5c8; padding-bottom: 1em; }
+  .nav { font-family: -apple-system, system-ui, sans-serif;
+         color: #6a6a6a; font-size: .92em; margin-bottom: 2.5em; }
+  .nav a { color: #b9522f; text-decoration: none; }
+  .nav a:hover { text-decoration: underline; }
+  code { font-family: ui-monospace, "SF Mono", "Menlo", monospace;
+         background: #eee8d5; padding: 1px 6px; border-radius: 4px;
+         font-size: 88%; font-style: normal; }
+  pre { background: #f4eedb; padding: 18px 20px; border-radius: 6px;
+        overflow: auto; font-size: 84%; line-height: 1.5;
+        font-family: ui-monospace, "SF Mono", "Menlo", monospace; }
+  pre code { background: transparent; padding: 0; }
+  .mermaid { background: #fff; border-radius: 8px; padding: 24px 12px;
+             text-align: center; margin: 1.4em 0; border: 1px solid #dad5c8; }
+  strong { color: #111; }
+  p { margin: 1em 0; }
+  ul { padding-left: 1.4em; }
+  li { margin: .6em 0; }
+  hr { border: 0; border-top: 1px solid #dad5c8; margin: 2em 0; }
+  footer { margin-top: 4em; padding-top: 1.4em; border-top: 1px solid #dad5c8;
+           font-family: -apple-system, system-ui, sans-serif; font-size: .9em; color: #6a6a6a; }
+  footer a { color: #b9522f; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a1a; color: #d8d2c4; }
+    h1, h2, strong { color: #f0e8d6; }
+    .meta, .nav, footer { color: #968d7c; border-color: #3a3530; }
+    .nav a, footer a { color: #d68a64; }
+    code { background: #2d2823; color: #d8d2c4; }
+    pre { background: #242019; }
+    .mermaid { background: #fff; border-color: #3a3530; }
+    hr { border-color: #3a3530; }
+  }
+</style></head>
+<body><div id="doc"><div class="nav"><a href="../index.html">← all posts</a></div><div id="article">Loading…</div>
+<footer>
+  Source: <a href="https://github.com/shwsingh/cca-f-prep/blob/main/notes/blog/week1-retrospective.md">notes/blog/week1-retrospective.md</a> on GitHub ·
+  Code: <a href="https://github.com/shwsingh/cca-f-prep">shwsingh/cca-f-prep</a>
+</footer>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "loose",
+                       flowchart: { curve: "basis", htmlLabels: true, padding: 14 } });
+  const md = "---\ntitle: \"I built a multi-agent support system in 6 days \u2014 what I'd change\"\ndate: 2026-06-09\ntags: [claude, llm, agents, anthropic]\n---\n\n# I built a multi-agent support system in 6 days \u2014 what I'd change\n\nA daily constraint: ship one runnable piece every day on top of the same application. The result processes customer emails end-to-end. Total cost for a test run of three emails: **$0.015** on Claude Haiku 4.5.\n\n## What it does\n\n```\n\ud83d\udce7  Customer email\n       \u2193\n\ud83c\udfaf  Extract N tickets   (tool use + Pydantic)\n       \u2193\n\ud83d\udccb  Sort by severity\n       \u2193\n\ud83d\udcac  Resolution agent \u00d7 N (stateful conversation loop)\n       \u2193\n\ud83d\udcca  BatchResult (cost, resolved, errored)\n```\n\n## How it's organized\n\nA small Python package, three modules. The pipeline is the only entry point; the extractor and agents are reusable units underneath it.\n\n```mermaid\nflowchart TB\n    subgraph pkg[\"meterflow/\"]\n        P[\"<b>pipelines/</b><br/>process_email<br/><i>integration seam</i>\"]\n        E[\"<b>extractors/</b><br/>extract_tickets<br/><i>tool use + Pydantic</i>\"]\n        A[\"<b>agents/</b><br/>run_conversation<br/><i>stateful loop</i>\"]\n    end\n    P --> E\n    P --> A\n\n    classDef m fill:#fff8e3,stroke:#9b9587,color:#222,stroke-width:1.5px\n    class P,E,A m\n```\n\n## What makes it \"agentic\"\n\nEach Resolution Agent isn't a single API call \u2014 it's a loop that owns its own state and decides when it's done. Four pieces, every turn:\n\n```mermaid\nflowchart LR\n    I[\"\ud83c\udfad <b>Identity</b><br/>system prompt<br/>+ ticket context\"]\n    M[\"\ud83d\udcbe <b>Memory</b><br/>ConversationState<br/>(messages, tokens)\"]\n    D[\"\ud83e\udde0 <b>Decide</b><br/>Claude turn<br/>check stop_reason\"]\n    S{\"Done?\"}\n    E([\"\u2705 resolved /<br/>escalated\"])\n\n    I --> M\n    M --> D\n    D --> S\n    S -->|no| M\n    S -->|yes| E\n\n    classDef node fill:#fff8e3,stroke:#9b9587,color:#222,stroke-width:1.5px\n    classDef done fill:#dafbe1,stroke:#1a7f37,color:#0e5223,stroke-width:1.5px\n    class I,M,D node\n    class E done\n```\n\nThe agent has an identity (system prompt), memory (the conversation state), a decision step (Claude reads context + decides what to say or do next), and a stop condition. Without all four, it's just a chat completion \u2014 not an agent.\n\n## Three things that mattered\n\n- **`stop_reason` is the universal completion signal.** Every retry, every \"did the model finish?\" check branches on it.\n- **Role alternation is a client-side discipline, not an API contract.** The Messages API silently accepts two consecutive user turns. Your loop is the only thing that keeps the conversation coherent.\n- **Tool use is structured output's other right answer.** When the shape is a list or strict, use a tool with `input_schema` derived from your Pydantic model.\n\n## What surprised me\n\n- **The agent kept asking for info the system prompt already gave it.** Fixed by declaring the embedded fields as authoritative in one paragraph.\n- **End-to-end resolution rate on the marquee case: 1/3.** Auth and quota scripts closed ambiguously and the agent kept asking clarifying questions. The kind of finding an eval suite catches; I don't have one yet.\n\n## What I'd change\n\n- **Start with `list[Ticket]` from day one.** Single-object contracts had to be retrofitted when multi-issue emails arrived.\n- **Use tool use as the resolution signal**, not a `[RESOLVED]` sentinel parsed with regex.\n- **Build prompt caching in from the start.** The agent system prompt was recomputed every turn \u2014 caching would have cut ~70% of input cost.\n\n## What's next\n\nPrompt caching, MCP server for the extraction tool. Target: cut $0.015 to under $0.005 for the same workload.\n\n\u2014 Shweta\n";
+  marked.use({ gfm: true, breaks: false });
+  const fm = md.match(/^---\n([\s\S]*?)\n---\n/);
+  let body = md, meta = {};
+  if (fm) {
+    body = md.slice(fm[0].length);
+    fm[1].split("\n").forEach(line => {
+      const m = line.match(/^(\w+):\s*(.*)$/);
+      if (m) meta[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    });
+  }
+  let prelude = "";
+  if (meta.date) prelude += `<div class="meta">${meta.date}</div>`;
+  document.getElementById("article").innerHTML = prelude + marked.parse(body);
+  document.querySelectorAll('pre code.language-mermaid').forEach((el, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'mermaid';
+    wrap.id = `m_${i}`;
+    wrap.textContent = el.textContent;
+    el.parentElement.replaceWith(wrap);
+  });
+  await mermaid.run({ querySelector: '.mermaid' });
+</script></body></html>
